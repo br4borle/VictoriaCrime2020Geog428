@@ -1,0 +1,357 @@
+print('Start Setup')
+
+# Required for each script
+import arcpy 
+
+print('Imported arcpy')
+
+'''
+Comment Method
+'''
+
+Victoria_Crime_V = (r"Z:\Geog 428\Assignment Two\Data\Victoria_Crime.shp")
+Parks_V = (r"Z:\Geog 428\Assignment Two\Data\Parks_maintained_by_the_City_of_Victoria.shp")
+Schools_V = (r"Z:\Geog 428\Assignment Two\Data\Schools.shp")
+Neighbourhoods_V = (r"Z:\Geog 428\Assignment Two\Data\Neighbourhood_Boundaries.shp")
+
+#Required to overwrite geodatabase
+arcpy.env.overwriteOutput = True
+
+
+#Create New Geodata Base (arcpy.CreateFileGDB_management("C:/output", "fGDB.gdb")
+arcpy.CreateFileGDB_management("Z:/Geog 428/Assignment Two/Geog428_Assignment2_BB","Geog428_Assignment2_StandAlone1.gdb")
+
+GDB_SA = ("Z:/Geog 428/Assignment Two/Geog428_Assignment2_BB/Geog428_Assignment2_StandAlone1.gdb")
+
+#Set Feature Classes + Import to Geodatabase
+#arcpy.FeatureClassToGeodatabase_conversion(['Z:/Geog 428/Assignment Two/Data/Victoria_Crime.shp','Z:/Geog 428/Assignment Two/Data/Parks_maintained_by_the_City_of_Victoria.shp','Z:/Geog 428/Assignment Two/Data/Schools.shp','Z:/Geog 428/Assignment Two/Data/Neighbourhood_Boundaries.shp'],'Z:/Geog 428/Assignment Two/Geog428_Assignment2_BB/Geog428_Assignment2_StandAlone1.gdb')
+
+arcpy.FeatureClassToGeodatabase_conversion([Victoria_Crime_V,Parks_V,Schools_V,Neighbourhoods_V],GDB_SA)
+
+
+GDB_SA = ("Z:/Geog 428/Assignment Two/Geog428_Assignment2_BB/Geog428_Assignment2_StandAlone1.gdb")
+
+#Set Workspace
+arcpy.env.workspace = GDB_SA
+
+#Create Feature Layers:
+arcpy.management.MakeFeatureLayer('Neighbourhood_Boundaries', 'Neighbourhood_Boundaries_FL')
+arcpy.management.MakeFeatureLayer('Schools', 'Schools_FL')
+arcpy.management.MakeFeatureLayer('Victoria_Crime', 'Victoria_Crime_FL')
+arcpy.management.MakeFeatureLayer('Parks_maintained_by_the_City_of_Victoria', 'Parks_FL')
+
+#Set Projection:
+arcpy.management.DefineProjection('Victoria_Crime_FL','Schools_FL') ##Define Projection
+
+print('Setup Complete')
+print('')
+
+#Question 1:How many incidents of any type occurred within all parks in the city?
+print('Start Question 1')
+
+arcpy.analysis.Intersect('Victoria_Crime_FL;Parks_FL',"victoriaCrime_Park_Intersect")
+
+print(arcpy.management.GetCount('victoriaCrime_Park_Intersect')) #2396
+
+print('Question 1 Complete')
+print('')
+
+#######
+
+#General Variables:
+NBH1 = 'South Jubilee'
+NBH2 = 'North Jubilee'
+NBH3 = 'Oaklands'
+NBH4 = 'Fernwood' 
+crimeType = 'Property Crime'
+
+#questionList = ('Q2','Q4')
+
+#Question 2:In 2016, how many property crime incidents occurred within 500 meters of parks in the Oaklands, Fernwood, and North/South Jubilee neighbourhoods?
+print ('Start Question 2')
+bufferSize = '500 meters'
+crimeYear = '2016'
+buffer = '500m'
+arcpy.management.SelectLayerByAttribute('Neighbourhood_Boundaries_FL', 'NEW_SELECTION',"Neighbourh = '"+NBH1+"' Or Neighbourh = '"+NBH2+"' Or Neighbourh = '"+NBH3+"' Or Neighbourh = '"+NBH4+"'") #Select NBH
+arcpy.analysis.Intersect('Neighbourhood_Boundaries_FL;Parks_FL','neighbourHood_Parks_Intersect') #Select Parks in NBH
+arcpy.analysis.Buffer('neighbourHood_Parks_Intersect',"Buff_"+buffer+"_Parks",bufferSize, 'FULL', 'ROUND','All',"",'PLANAR') #Buffer Parks
+arcpy.management.SelectLayerByAttribute('Victoria_Crime_FL', 'NEW_SELECTION',"parent_inc = '"+crimeType+"' And incident_d LIKE '%"+crimeYear+"%'") #Select Crime Type
+arcpy.analysis.Clip('Victoria_Crime_FL', "Buff_"+buffer+"_Parks","ClipCrime_"+buffer+"_Parks_OLFWNJSJ")
+print(arcpy.management.GetCount("ClipCrime_"+buffer+"_Parks_OLFWNJSJ"))
+print('Question 2 Complete')#276
+
+
+#Question 4: In 2017, how many property crime incidents occurred within 100 meters of parks in the Oaklands, Fernwood, and North/South Jubilee neighbourhoods?
+print('Start Question 4')
+bufferSize = '100 meters'
+crimeYear = '2017'
+buffer = '100m'
+arcpy.management.SelectLayerByAttribute('Neighbourhood_Boundaries_FL', 'NEW_SELECTION',"Neighbourh = '"+NBH1+"' Or Neighbourh = '"+NBH2+"' Or Neighbourh = '"+NBH3+"' Or Neighbourh = '"+NBH4+"'") #Select NBH
+arcpy.analysis.Intersect('Neighbourhood_Boundaries_FL;Parks_FL','neighbourHood_Parks_Intersect') #Select Parks in NBH
+arcpy.analysis.Buffer('neighbourHood_Parks_Intersect',"Buff_"+buffer+"_Parks",bufferSize, 'FULL', 'ROUND','All',"",'PLANAR') #Buffer Parks
+arcpy.management.SelectLayerByAttribute('Victoria_Crime_FL', 'NEW_SELECTION',"parent_inc = '"+crimeType+"' And incident_d LIKE '%"+crimeYear+"%'") #Select Crime Type
+arcpy.analysis.Clip('Victoria_Crime_FL', "Buff_"+buffer+"_Parks","ClipCrime_"+buffer+"_Parks_OLFWNJSJ")
+print(arcpy.management.GetCount("ClipCrime_"+buffer+"_Parks_OLFWNJSJ"))
+print('Question 4 Complete')#49
+
+print('Question 2 and 4 Complete')
+print('')
+####
+
+#Variables:
+CT1 = 'Disorder'
+CT2 = 'Drugs'
+CT3 = 'Liquor'
+NBH1 = 'Victoria West'
+
+#questionList2 = ('Q3', 'Q5')
+
+#Question 3: In 2017, how many drug and liquor and disorder incidents occurred within 500 meters of schools in all neighbourhoods except Victoria West? 
+print('Start Question 3')
+bufferSize = '500 meters'
+crimeYear = '2017'
+buffer = '500m'
+arcpy.management.SelectLayerByAttribute('Neighbourhood_Boundaries_FL', 'NEW_SELECTION',"Neighbourh NOT IN ('"+NBH1+"')")
+arcpy.analysis.Intersect('Schools_FL;Neighbourhood_Boundaries_FL','school_NBH_Intersect')
+arcpy.analysis.Buffer('school_NBH_Intersect',"buffer"+buffer+"_schools",bufferSize, 'FULL',"", 'ALL',"", 'PLANAR')
+arcpy.management.SelectLayerByAttribute('Victoria_Crime_FL', 'NEW_SELECTION',"(parent_inc = '"+CT1+"' Or parent_inc = '"+CT2+"' Or parent_inc = '"+CT3+"') And incident_d LIKE '%"+crimeYear+"%'")
+arcpy.analysis.Clip('Victoria_Crime_FL', "buffer"+buffer+"_schools","Crime_"+buffer+"_Schools")
+print(arcpy.management.GetCount("Crime_"+buffer+"_Schools"))
+#The following should match the "Start Question Number"
+print('Question 3 Complete')#784
+
+
+#Question 5: In 2015, how many drug and liquor and disorder incidents occurred within 100 meters of schools in all neighbourhoods except Victoria West?
+print('Start Question 5')
+bufferSize = '100 meters'
+crimeYear = '2015'
+buffer = '100m'
+arcpy.management.SelectLayerByAttribute('Neighbourhood_Boundaries_FL', 'NEW_SELECTION',"Neighbourh NOT IN ('"+NBH1+"')")
+arcpy.analysis.Intersect('Schools_FL;Neighbourhood_Boundaries_FL','school_NBH_Intersect')
+arcpy.analysis.Buffer('school_NBH_Intersect',"buffer"+buffer+"_schools",bufferSize, 'FULL',"", 'ALL',"", 'PLANAR')
+arcpy.management.SelectLayerByAttribute('Victoria_Crime_FL', 'NEW_SELECTION',"(parent_inc = '"+CT1+"' Or parent_inc = '"+CT2+"' Or parent_inc = '"+CT3+"') And incident_d LIKE '%"+crimeYear+"%'")
+arcpy.analysis.Clip('Victoria_Crime_FL', "buffer"+buffer+"_schools","Crime_"+buffer+"_Schools")
+print(arcpy.management.GetCount("Crime_"+buffer+"_Schools"))
+print('Question 5 Complete')#156
+
+print('Question 3 and 5 Complete')
+print('')
+#######
+
+
+#Question 6: Crimes during the Days of the Week
+
+print('Start Question 6')
+
+#Method: Counter
+
+robbery = [0,0,0,0,0,0,0] #Setting up empty arrays
+assault = [0,0,0,0,0,0,0]
+property_Crime = [0,0,0,0,0,0,0]
+theft = [0,0,0,0,0,0,0]
+theft_FV = [0,0,0,0,0,0,0]
+
+VC_Fields = ['day_of_wee','parent_inc']
+
+curObject = arcpy.da.SearchCursor(Victoria_Crime_V,VC_Fields) ##Searching Victoria Crime data for Day of Week and Parent Crime Type
+
+for i in curObject:
+    if i[1] == 'Robbery':
+        if i[0]=='Monday':
+            robbery[0]=robbery[0]+1
+        elif i[0]=='Tuesday':
+            robbery[1] = robbery[1]+1
+        elif i[0]=='Wednesday':
+            robbery[2] = robbery[2]+1
+        elif i[0]=='Thursday':
+            robbery[3] = robbery[3]+1
+        elif i[0]=='Friday':
+            robbery[4] = robbery[4]+1
+        elif i[0]=='Saturday':
+            robbery[5] = robbery[5]+1
+        elif i[0]=='Sunday':
+            robbery[6] = robbery[6]+1
+    elif i[1]=='Property Crime':
+        if i[0]=='Monday':
+            property_Crime[0] = property_Crime[0]+1
+        elif i[0]=='Tuesday':
+            property_Crime[1] = property_Crime[1]+1
+        elif i[0]=='Wednesday':
+            property_Crime[2] = property_Crime[2]+1
+        elif i[0]=='Thursday':
+            property_Crime[3] = property_Crime[3]+1
+        elif i[0]=='Friday':
+            property_Crime[4] = property_Crime[4]+1
+        elif i[0]=='Saturday':
+            property_Crime[5] = property_Crime[5]+1
+        elif i[0]=='Sunday':
+            property_Crime[6] = property_Crime[6]+1
+    elif i[1]=='Assault':
+        if i[0]=='Monday':
+            assault[0] = assault[0]+1
+        elif i[0]=='Tuesday':
+            assault[1] = assault[1]+1
+        elif i[0]=='Wednesday':
+            assault[2] = assault[2]+1
+        elif i[0]=='Thursday':
+            assault[3] = assault[3]+1
+        elif i[0]=='Friday':
+            assault[4] = assault[4]+1
+        elif i[0]=='Saturday':
+            assault[5] = assault[5]+1
+        elif i[0]=='Sunday':
+            assault[6] = assault[6]+1
+    elif i[1]=='Theft':
+        if i[0]=='Monday':
+            theft[0] = theft[0]+1
+        elif i[0]=='Tuesday':
+            theft[1] = theft[1]+1
+        elif i[0]=='Wednesday':
+            theft[2] = theft[2]+1
+        elif i[0]=='Thursday':
+            theft[3] = theft[3]+1
+        elif i[0]=='Friday':
+            theft[4] = theft[4]+1
+        elif i[0]=='Saturday':
+            theft[5] = theft[5]+1
+        elif i[0]=='Sunday':
+            theft[6] = theft[6]+1
+    elif i[1]=='Theft from Vehicle':
+        if i[0]=='Monday':
+            theft_FV[0] = theft_FV[0]+1
+        elif i[0]=='Tuesday':
+            theft_FV[1] = theft_FV[1]+1
+        elif i[0]=='Wednesday':
+            theft_FV[2] = theft_FV[2]+1
+        elif i[0]=='Thursday':
+            theft_FV[3] = theft_FV[3]+1
+        elif i[0]=='Friday':
+            theft_FV[4] = theft_FV[4]+1
+        elif i[0]=='Saturday':
+            theft_FV[5] = theft_FV[5]+1
+        elif i[0]=='Sunday':
+            theft_FV[6] = theft_FV[6]+1
+
+print('Task Five For Loop Completed')
+
+print('')
+
+#Highest count and day, and the complete arrays
+
+print('Robbery Count: MaxDay/MaxCount = Friday/126') 
+print(robbery)
+print('')
+
+print('Assault Count: Saturday/462')
+print(assault)
+print('')
+
+print('Property Crime Count: Monday/1341')
+print(property_Crime)
+print('')
+
+print('Theft Count: Tuesday/3367')
+print(theft)
+print('')
+
+print('Theft from Vehicle Count: Monday/1788')
+print(theft_FV)
+print('')
+
+print('')
+
+import operator
+
+crimeList = (robbery,assault,property_Crime,theft,theft_FV)
+
+for crime_Type in crimeList:
+    if crime_Type == robbery:
+        index, value = max(enumerate(crime_Type), key=operator.itemgetter(1))
+        if index==0:
+            day='Monday'
+        elif index==1:
+            day='Tuesday'
+        elif index==2:
+            day='Wednesday'
+        elif index==3:
+            day='Thursday'
+        elif index==4:
+            day='Friday'
+        elif index==5:
+            day='Saturday'
+        elif index==6:
+            day='Sunday'
+        print("Highest Robbery rate was on ",day,"(",value,")")
+    elif crime_Type == assault:
+        index, value = max(enumerate(crime_Type), key=operator.itemgetter(1))
+        if index==0:
+            day='Monday'
+        elif index==1:
+            day='Tuesday'
+        elif index==2:
+            day='Wednesday'
+        elif index==3:
+            day='Thursday'
+        elif index==4:
+            day='Friday'
+        elif index==5:
+            day='Saturday'
+        elif index==6:
+            day='Sunday'
+        print("Highest Asssault rate was on ",day,"(",value,")")
+    elif crime_Type == property_Crime:
+        index, value = max(enumerate(crime_Type), key=operator.itemgetter(1))
+        if index==0:
+            day='Monday'
+        elif index==1:
+            day='Tuesday'
+        elif index==2:
+            day='Wednesday'
+        elif index==3:
+            day='Thursday'
+        elif index==4:
+            day='Friday'
+        elif index==5:
+            day='Saturday'
+        elif index==6:
+            day='Sunday'
+        print("Highest Property Crime rate was on ",day,"(",value,")")
+    elif crime_Type == theft:
+        index, value = max(enumerate(crime_Type), key=operator.itemgetter(1))
+        if index==0:
+            day='Monday'
+        elif index==1:
+            day='Tuesday'
+        elif index==2:
+            day='Wednesday'
+        elif index==3:
+            day='Thursday'
+        elif index==4:
+            day='Friday'
+        elif index==5:
+            day='Saturday'
+        elif index==6:
+            day='Sunday'
+        print("Highest Theft rate was on ",day,"(",value,")")
+    elif crime_Type == theft_FV:
+        index, value = max(enumerate(crime_Type), key=operator.itemgetter(1))
+        if index==0:
+            day='Monday'
+        elif index==1:
+            day='Tuesday'
+        elif index==2:
+            day='Wednesday'
+        elif index==3:
+            day='Thursday'
+        elif index==4:
+            day='Friday'
+        elif index==5:
+            day='Saturday'
+        elif index==6:
+            day='Sunday'
+        print("Highest Theft from Vehicle rate was on ",day,"(",value,")")
+
+print('Question 6 Complete')
+
+print('End of Script')
+
