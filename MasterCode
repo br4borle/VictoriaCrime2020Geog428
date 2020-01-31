@@ -49,7 +49,7 @@ print('')
 #Question 1:How many incidents of any type occurred within all parks in the city?
 print('Start Question 1')
 
-arcpy.analysis.Intersect('Victoria_Crime_FL;Parks_FL',"victoriaCrime_Park_Intersect")
+arcpy.analysis.Intersect('Victoria_Crime_FL;Parks_FL','victoriaCrime_Park_Intersect')
 
 print(arcpy.management.GetCount('victoriaCrime_Park_Intersect')) #2396
 
